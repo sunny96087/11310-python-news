@@ -136,9 +136,11 @@
           const category = document.querySelector(
             `#${tabId} select[name="category"]`
           ).value;
-          url = `http://127.0.0.1:5000/api/everything?query=${query}&category=${category}`;
+          // url = `http://127.0.0.1:5000/api/everything?query=${query}&category=${category}`;
+          url = `https://infinite-beach-19597-befe83c6cd34.herokuapp.com/api/everything?query=${query}&category=${category}`;
         } else if (tabId === "usNewsTab") {
-          url = `http://127.0.0.1:5000/api/top-headlines?country=us`;
+          // url = `http://127.0.0.1:5000/api/top-headlines?country=us`;
+          url = `https://infinite-beach-19597-befe83c6cd34.herokuapp.com/api/top-headlines?country=us`;
         }
 
         try {
