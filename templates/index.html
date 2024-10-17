@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>每天看新聞</title>
+
+    <!-- Tailwind CSS CDN -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      body {
+        font-family: "Noto Sans TC", sans-serif;
+      }
+      .tab {
+        display: none;
+      }
+      .tab.active {
+        display: block;
+      }
+
+      .typewriter {
+        font-family: monospace;
+        white-space: nowrap;
+        overflow: hidden;
+        border-right: 2px solid;
+        width: 0;
+        animation: typing 3.5s steps(40, end),
+          blink-caret 0.75s step-end infinite;
+      }
+
+      @keyframes typing {
+        from {
+          width: 0;
+        }
+        to {
+          width: 100%;
+        }
+      }
+
+      @keyframes blink-caret {
+        from,
+        to {
+          border-color: transparent;
+        }
+        50% {
+          border-color: black;
+        }
+      }
+
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0;
+        }
+      }
+
+      .animate-blink {
+        animation: blink 1s step-end infinite;
+      }
+    </style>
+
+    <script>
+      let activeTab = "everythingTab";
+
+      function showTab(tabId) {
+        activeTab = tabId;
+
+        document
+          .querySelectorAll(".tab")
+          .forEach((tab) => tab.classList.remove("active"));
+
+        document.getElementById(tabId).classList.add("active");
+
+        // 更新 "everythingButton" 樣式
+        const everythingButton = document.getElementById("everythingButton");
+        everythingButton.classList.toggle(
+          "bg-blue-500",
+          activeTab === "everythingTab"
+        );
+        everythingButton.classList.toggle(
+          "text-white",
+          activeTab === "everythingTab"
+        );
+        everythingButton.classList.toggle(
+          "bg-transparent",
+          activeTab !== "everythingTab"
+        );
+        everythingButton.classList.toggle(
+          "text-blue-500",
+          activeTab !== "everythingTab"
+        );
+
+        // 更新 "usNewsButton" 樣式
+        const usNewsButton = document.getElementById("usNewsButton");
+        usNewsButton.classList.toggle("bg-blue-500", activeTab === "usNewsTab");
+        usNewsButton.classList.toggle("text-white", activeTab === "usNewsTab");
+        usNewsButton.classList.toggle(
+          "bg-transparent",
+          activeTab !== "usNewsTab"
+        );
+        usNewsButton.classList.toggle(
+          "text-blue-500",
+          activeTab !== "usNewsTab"
+        );
+
+        // 切換到每個分頁時，自動發送對應的 API 請求
+        searchNews(new Event("tabChange"), tabId);
+      }
+
+      // 初始化第一個分頁
+      document.addEventListener("DOMContentLoaded", function () {
+        showTab(activeTab);
+      });
+
+      async function searchNews(event, tabId) {
+        event.preventDefault(); // 阻止表單自動提交和換頁
+
+        // 當選擇 "美國新聞" 分頁時，直接獲取新聞數據，不使用表單
+        let url = "";
+        if (tabId === "everythingTab") {
+          const query = document.querySelector(
+            `#${tabId} input[name="query"]`
+          ).value;
+          const category = document.querySelector(
+            `#${tabId} select[name="category"]`
+          ).value;
+          url = `http://127.0.0.1:5000/api/everything?query=${query}&category=${category}`;
+        } else if (tabId === "usNewsTab") {
+          url = `http://127.0.0.1:5000/api/top-headlines?country=us`;
+        }
+
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error("Network response was not ok");
+          }
+          const data = await response.json();
+
+          // 清空之前的結果
+          const resultsContainer = document.querySelector(`#${tabId} #results`);
+          resultsContainer.innerHTML = "";
+
+          // 遍歷新聞資料並插入到頁面
+          data.articles.forEach((article) => {
+            const articleItem = document.createElement("li");
+            articleItem.classList.add(
+              "border",
+              "p-4",
+              "mb-4",
+              "bg-white",
+              "w-full",
+              "flex",
+              "flex-col",
+              "md:flex-row",
+              "gap-4",
+              "rounded-md"
+            );
+            articleItem.innerHTML = `
+                      <div class="h-48 md:w-2/5 md:max-w-2/5 mb-2 md:overflow-hidden shrink-0">
+                          <img class="w-full h-full object-cover" src="${article.urlToImage}" alt="${article.title}" />
+                      </div>
+                      <div>
+                          <h2 class="text-xl font-semibold mb-2">${article.title}</h2>
+                          <p class="mb-2 w-full break-words">${article.description}</p>
+                          <div class="flex justify-end mt-auto"><a class="text-blue-500 underline break-words text-right hover:text-blue-300" href="${article.url}" target="_blank">閱讀更多 (開新視窗)</a></div>
+                      </div>
+                  `;
+            resultsContainer.appendChild(articleItem);
+          });
+        } catch (error) {
+          console.error("Fetch error:", error);
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        // 在加載頁面時，自動請求當前選中的 tab 的新聞
+        searchNews(new Event("DOMContentLoaded"), activeTab);
+
+        const text = "『報』不停，全球焦點一手掌握！";
+        let i = 0;
+        let isDeleting = false; // 控制是否在刪除文字
+        const speed = 150; // 打字速度 (越小越快)
+        const deleteSpeed = 75; // 刪除速度
+        const delay = 2000; // 每次完成後停留的時間
+
+        function typeWriter() {
+          const element = document.getElementById("typewriter");
+
+          if (!isDeleting && i < text.length) {
+            // 正在打字
+            element.innerHTML += text.charAt(i);
+            i++;
+            setTimeout(typeWriter, speed);
+          } else if (isDeleting && i > 0) {
+            // 正在刪除
+            element.innerHTML = text.substring(0, i - 1);
+            i--;
+            setTimeout(typeWriter, deleteSpeed);
+          } else if (i === text.length && !isDeleting) {
+            // 完成打字後的停留
+            setTimeout(() => {
+              isDeleting = true;
+              setTimeout(typeWriter, deleteSpeed);
+            }, delay);
+          } else if (isDeleting && i === 0) {
+            // 完成刪除後重新開始打字
+            isDeleting = false;
+            setTimeout(typeWriter, speed);
+          }
+        }
+
+        typeWriter();
+      });
+    </script>
+  </head>
+  <body class="bg-gray-100 p-8" style="max-width: 1280px; margin: auto">
+    <div class="flex items-center h-8 mb-8 justify-center">
+      <h1
+        id="typewriter"
+        class="text-md sm:text-3xl font-bold text-center min-w-[200px]"
+      ></h1>
+      <div
+        class="shrink-0 min-w-1 w-1 bg-black h-8 ml-1 animate-blink"
+        style="box-shadow: 0 0 6px 2px rgba(0, 0, 0, 0.3)"
+      ></div>
+    </div>
+
+    <div
+      class="tab-buttons text-center mb-8 flex justify-center border border-blue-500 rounded-md"
+    >
+      <button
+        id="everythingButton"
+        onclick="showTab('everythingTab')"
+        class="py-3 px-6 rounded-l-md focus:outline-none w-full"
+      >
+        全球新聞 <span class="hidden md:inline-block ml-2">Global News</span>
+      </button>
+      <button
+        id="usNewsButton"
+        onclick="showTab('usNewsTab')"
+        class="py-3 px-6 rounded-r-md focus:outline-none w-full"
+      >
+        美國新聞<span class="hidden md:inline-block ml-2">US News</span>
+      </button>
+    </div>
+
+    <!-- everything API 分頁 -->
+    <div id="everythingTab" class="tab active">
+      <form
+        onsubmit="searchNews(event, 'everythingTab')"
+        class="bg-white shadow-md rounded p-6 mb-6"
+      >
+        <input
+          type="text"
+          name="query"
+          placeholder="輸入關鍵字..."
+          class="w-full border border-gray-300 p-2 rounded mb-4"
+        />
+        <select
+          name="category"
+          class="w-full border border-gray-300 p-2 rounded mb-4"
+        >
+          <option value="">選擇新聞分類</option>
+          <option value="business">財經</option>
+          <option value="sports">運動</option>
+          <option value="technology">科技</option>
+        </select>
+        <button
+          type="submit"
+          class="bg-green-500 text-white py-2 px-4 rounded-md w-full"
+        >
+          搜尋全球新聞
+        </button>
+      </form>
+      <ul id="results" class="list-none">
+        <!-- 搜尋結果會插入到這裡 -->
+      </ul>
+    </div>
+
+    <!-- 美國新聞分頁 -->
+    <div id="usNewsTab" class="tab">
+      <!-- <form
+        onsubmit="searchNews(event, 'usNewsTab')"
+        class="bg-white shadow-md rounded p-6 mb-6"
+      >
+        <input
+          type="text"
+          name="query"
+          placeholder="輸入關鍵字..."
+          class="w-full border border-gray-300 p-2 rounded mb-4"
+        />
+        <select
+          name="category"
+          class="w-full border border-gray-300 p-2 rounded mb-4"
+        >
+          <option value="">選擇新聞分類</option>
+          <option value="business">財經</option>
+          <option value="sports">運動</option>
+          <option value="technology">科技</option>
+        </select>
+        <button
+          type="submit"
+          class="bg-green-500 text-white py-2 px-4 rounded-md w-full"
+        >
+          搜尋美國新聞
+        </button>
+      </form> -->
+      <ul id="results" class="list-none">
+        <!-- 搜尋結果會插入到這裡 -->
+      </ul>
+    </div>
+  </body>
+</html>
